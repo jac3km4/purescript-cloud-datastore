@@ -30,13 +30,13 @@ type Payload a =
   }
 
 type MutationResult =
-  { key :: Key
+  { key :: { path :: Array { kind :: String, id :: String } }
   , conflictDetected :: Boolean
-  , version :: Int
+  , version :: String
   }
 
 type CommitResponse =
-  { mutationReults :: Array MutationResult, indexUpdates :: Int }
+  { mutationResults :: Array MutationResult, indexUpdates :: Int }
 
 type QueryInfo = { endCursor :: Nullable String }
 
