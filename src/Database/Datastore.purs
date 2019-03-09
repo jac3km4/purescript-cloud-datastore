@@ -10,20 +10,19 @@ module Database.Datastore
   , keyById
   ) where
 
-import Prelude (Unit, const, show, ($), (<$), (<<<))
-
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Function.Uncurried (Fn2, runFn2)
 import Data.Maybe (Maybe(..))
 import Data.Nullable (Nullable, notNull, null, toMaybe)
+import Database.Datastore.Types (Client, ClientOptions, CommitResponse, Key(..), Kind, Payload, Query, QueryInfo, QueryOptions)
 import Effect (Effect)
 import Effect.Aff (Aff, error, makeAff, nonCanceler)
 import Effect.Exception (Error)
 import Effect.Uncurried (EffectFn1, EffectFn2, EffectFn3, EffectFn4, mkEffectFn2, runEffectFn1, runEffectFn3, runEffectFn4)
 import Foreign (Foreign)
+import Prelude (Unit, const, show, ($), (<$), (<<<))
 import Simple.JSON (class ReadForeign, class WriteForeign, read, write)
-import Database.Datastore.Types (Client, ClientOptions, CommitResponse, Key(..), Kind, Payload, Query, QueryInfo, QueryOptions)
 
 defaultClientOpts :: ClientOptions
 defaultClientOpts =
@@ -48,21 +47,24 @@ save cli payload = makeAff \cb ->
   where
     body = payload { data = write payload.data }
 
-get :: ∀ a. ReadForeign a => Client -> Key -> QueryOptions -> Aff a
+get :: ∀ a. ReadForeign a => Client -> Key -> QueryOptions -> Aff (Maybe a)
 get cli key opts = makeAff \cb ->
   nonCanceler <$ runEffectFn4 _get cli key opts (mkEffectFn2 $ handler cb)
   where
     handler cb err entity = cb $
       case toMaybe entity of
         Just val -> lmap (error <<< show) $ read val
-        _ -> Left err
+        Nothing ->
+          case toMaybe err of
+            Just msg -> Left msg
+            Nothing -> Right Nothing
 
 keyById :: Kind -> Int -> Key
 keyById kind id =
   Key { kind: notNull kind, id: notNull $ show id, name: null, path: [], parent: null }
 
-type CommitCallback = EffectFn2 Error CommitResponse Unit
-type GetCallback = EffectFn2 Error (Nullable Foreign) Unit
+type CommitCallback = EffectFn2 (Nullable Error) CommitResponse Unit
+type GetCallback = EffectFn2 (Nullable Error) (Nullable Foreign) Unit
 
 foreign import _connect :: EffectFn1 ClientOptions Client
 foreign import _createQuery :: Fn2 Client Kind Query
