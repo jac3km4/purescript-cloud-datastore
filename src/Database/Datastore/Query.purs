@@ -1,7 +1,7 @@
 module Database.Datastore.Query where
 import Effect.Uncurried
 
-import Data.Bifunctor (lmap)
+import Data.Bifunctor (bimap)
 import Data.Either (Either(..))
 import Data.Function.Uncurried (Fn2, Fn3, Fn4, runFn2, runFn3, runFn4)
 import Data.Maybe (Maybe(..))
@@ -50,15 +50,17 @@ limit = runFn2 _limit
 offset :: Int -> Query -> Query
 offset = runFn2 _offset
 
-run :: ∀ a. ReadForeign a => Query -> Aff (Array a)
+run :: ∀ a. ReadForeign a => Query -> Aff (QueryResponse a)
 run q = makeAff \cb -> nonCanceler <$ runEffectFn2 _run q (mkEffectFn3 $ handler cb)
   where
-    handler cb err entities _ = cb $
-      case toMaybe entities of 
-        Just e -> lmap (error <<< show) $ traverse read e
+    handler cb err entities info = cb $
+      case toMaybe entities of
+        Just e -> bimap (error <<< show) (wrap info) $ traverse read e
         Nothing -> Left err
+    wrap info entities = { entities, info }
 
 type QueryCallback = EffectFn3 Error (Nullable (Array Foreign)) QueryInfo Unit
+type QueryResponse a = { entities :: Array a, info :: QueryInfo }
 
 foreign import _filter :: Fn4 Property FilterOperator Foreign Query Query
 foreign import _hasAncestor :: Fn2 Key Query Query
