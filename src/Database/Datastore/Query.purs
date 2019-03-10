@@ -50,6 +50,9 @@ limit = runFn2 _limit
 offset :: Int -> Query -> Query
 offset = runFn2 _offset
 
+start :: String -> Query -> Query
+start = runFn2 _start
+
 run :: ∀ a. ReadForeign a => Query -> Aff (QueryResponse a)
 run q = makeAff \cb -> nonCanceler <$ runEffectFn2 _run q (mkEffectFn3 $ handler cb)
   where
@@ -69,4 +72,5 @@ foreign import _groupBy :: Fn2 (Array Property) Query Query
 foreign import _select :: Fn2 (Array Property) Query Query
 foreign import _limit :: Fn2 Int Query Query
 foreign import _offset :: Fn2 Int Query Query
+foreign import _start :: Fn2 String Query Query
 foreign import _run :: EffectFn2 Query QueryCallback Unit

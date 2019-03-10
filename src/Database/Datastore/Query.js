@@ -27,6 +27,10 @@ exports._offset = function(offset, query) {
     return query.offset(offset);
 }
 
+exports._start = function(cursor, query) {
+    return query.start(cursor);
+}
+
 exports._run = function(query, cb) {
     return query.run(cb);
 }
